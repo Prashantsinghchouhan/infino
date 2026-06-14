@@ -17,8 +17,16 @@
 
 use std::sync::Arc;
 
+use crate::superfile::SuperfileReader;
+use crate::superfile::reader::{rank_back_indices, row_selection_for_ids};
+use crate::supertable::handle::SupertableReader;
+use crate::supertable::manifest::SuperfileUri;
+use crate::supertable::options::{DECIMAL128_PRECISION, DECIMAL128_SCALE};
+use crate::supertable::query::SuperfileHit;
 use arrow::compute::{concat_batches, take};
-use arrow_array::{ArrayRef, Float32Array, RecordBatch, RecordBatchOptions, UInt32Array};
+use arrow_array::{
+    ArrayRef, Decimal128Array, Float32Array, RecordBatch, RecordBatchOptions, UInt32Array,
+};
 use arrow_schema::{DataType, Field, Schema, SchemaRef};
 use datafusion::error::{DataFusionError, Result as DfResult};
 use datafusion::logical_expr::Expr;
@@ -27,12 +35,6 @@ use futures::TryStreamExt;
 use parquet::arrow::ProjectionMask;
 use parquet::arrow::async_reader::{ParquetObjectReader, ParquetRecordBatchStreamBuilder};
 use rayon::prelude::*;
-
-use crate::superfile::SuperfileReader;
-use crate::superfile::reader::{rank_back_indices, row_selection_for_ids};
-use crate::supertable::handle::SupertableReader;
-use crate::supertable::manifest::SuperfileUri;
-use crate::supertable::query::SuperfileHit;
 
 /// Resolve `hits` to one `RecordBatch`, with `projection` naming the
 /// output columns (any of `_id`, the visible scalar columns, or the
@@ -215,9 +217,6 @@ fn resolve_ids_arithmetic(
     reader: &SupertableReader,
     hits: &[SuperfileHit],
 ) -> Option<DfResult<RecordBatch>> {
-    use crate::supertable::options::{DECIMAL128_PRECISION, DECIMAL128_SCALE};
-    use arrow_array::Decimal128Array;
-
     let manifest = reader.manifest();
     // Hit sets are top-k sized, so per-superfile memoization via a
     // linear scan is cheaper than building a map.

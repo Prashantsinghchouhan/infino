@@ -49,6 +49,14 @@ pub fn n_commits() -> usize {
         .div_ceil(MAX_DOCS_PER_COMMIT)
         .max(MIN_COMMIT_CHUNKS)
 }
+
+/// Writer-pool thread count for ingest — the machine's logical core
+/// count by default, overridable with `INFINO_BENCH_WRITERS` (same
+/// knob the superfile build honors). Each commit's per-shard build
+/// fans out across this pool.
+pub fn n_writers() -> usize {
+    corpus::parallel_writers()
+}
 pub const TEXT_COLUMN: &str = "title";
 pub const VEC_COLUMN: &str = "emb";
 pub const SQL_CATEGORY_COLUMN: &str = "category";
@@ -162,7 +170,7 @@ pub fn options_for(
     if modality == Modality::Sql {
         let pool = Arc::new(
             rayon::ThreadPoolBuilder::new()
-                .num_threads(num_cpus::get().max(1))
+                .num_threads(n_writers().max(1))
                 .build()
                 .expect("pool"),
         );
@@ -179,7 +187,7 @@ pub fn options_for(
     let n_cent_per_superfile = (n_cent_total / n_commits()).max(1);
     let pool = Arc::new(
         rayon::ThreadPoolBuilder::new()
-            .num_threads(num_cpus::get().max(1))
+            .num_threads(n_writers().max(1))
             .build()
             .expect("pool"),
     );
@@ -251,6 +259,19 @@ impl PreparedCorpus {
     /// phase doesn't regenerate 10M×384 floats.
     pub fn vectors(&self) -> Option<&MmapVectorCorpus> {
         self.vectors.as_ref()
+    }
+
+    /// Logical size of the raw input corpus fed to ingest — text bytes
+    /// plus vector f32 bytes. This is the *source* data size, distinct
+    /// from the index bytes the supertable writes to object storage.
+    pub fn byte_size(&self) -> u64 {
+        let text = self.text.as_ref().map(|t| t.total_bytes()).unwrap_or(0);
+        let vec = self
+            .vectors
+            .as_ref()
+            .map(|v| std::mem::size_of_val(v.as_slice()) as u64)
+            .unwrap_or(0);
+        text + vec
     }
 }
 
@@ -491,16 +512,14 @@ fn chunk_batch(
         columns.push(Arc::new(LargeStringArray::from(titles.clone())));
     }
     if modality.has_sql() {
-        let titles = titles.as_ref().expect("sql modality has text");
-        // title_noidx — same payload, unindexed twin column.
-        columns.push(Arc::new(LargeStringArray::from(titles.clone())));
+        let _ = titles.as_ref().expect("sql modality has text");
         let bucket_vals: Vec<String> = (start..end)
             .map(|doc_id| format!("b{}", doc_id % 10))
             .collect();
         let key_vals: Vec<String> = (start..end)
             .map(|doc_id| scatter_key(doc_id as u64))
             .collect();
-        for vals in [&bucket_vals, &bucket_vals, &key_vals, &key_vals] {
+        for vals in [&bucket_vals, &key_vals] {
             columns.push(Arc::new(LargeStringArray::from(
                 vals.iter().map(String::as_str).collect::<Vec<_>>(),
             )));
