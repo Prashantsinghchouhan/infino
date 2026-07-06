@@ -136,6 +136,10 @@ mod utils;
 
 // ---- Curated public surface ----
 
+/// Arrow `Schema` / `RecordBatch` builders for the public API.
+/// Import as `infino::arrow_schema` and `infino::arrow_array`.
+pub use arrow_array;
+pub use arrow_schema;
 /// Catalog entry points and handle: open a `Connection`, then create /
 /// open / drop / list tables.
 pub use catalog::{ColdFetchMode, ConnectOptions, Connection, IndexSpec, connect, connect_with};

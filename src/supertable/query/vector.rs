@@ -760,9 +760,9 @@ impl Supertable {
     ///
     /// ```
     /// # use std::sync::Arc;
-    /// # use arrow_array::{FixedSizeListArray, Float32Array, RecordBatch};
-    /// # use arrow_array::types::Float32Type;
-    /// # use arrow_schema::{DataType, Field, Schema};
+    /// # use infino::arrow_array::{FixedSizeListArray, Float32Array, RecordBatch};
+    /// # use infino::arrow_array::types::Float32Type;
+    /// # use infino::arrow_schema::{DataType, Field, Schema};
     /// # use infino::{connect, IndexSpec, Metric, VectorSearchOptions};
     /// # let db = connect("memory://")?;
     /// # let schema = Arc::new(Schema::new(vec![Field::new(

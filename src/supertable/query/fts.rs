@@ -963,8 +963,8 @@ impl Supertable {
     ///
     /// ```
     /// # use std::sync::Arc;
-    /// # use arrow_array::{LargeStringArray, RecordBatch};
-    /// # use arrow_schema::{DataType, Field, Schema};
+    /// # use infino::arrow_array::{LargeStringArray, RecordBatch};
+    /// # use infino::arrow_schema::{DataType, Field, Schema};
     /// # use infino::{connect, BoolMode, IndexSpec};
     /// # let db = connect("memory://")?;
     /// # let schema = Arc::new(Schema::new(vec![Field::new("body", DataType::LargeUtf8, false)]));
@@ -1058,8 +1058,8 @@ impl Supertable {
     ///
     /// ```
     /// # use std::sync::Arc;
-    /// # use arrow_array::{LargeStringArray, RecordBatch};
-    /// # use arrow_schema::{DataType, Field, Schema};
+    /// # use infino::arrow_array::{LargeStringArray, RecordBatch};
+    /// # use infino::arrow_schema::{DataType, Field, Schema};
     /// # use infino::{connect, BoolMode, IndexSpec};
     /// # let db = connect("memory://")?;
     /// # let schema = Arc::new(Schema::new(vec![Field::new("body", DataType::LargeUtf8, false)]));

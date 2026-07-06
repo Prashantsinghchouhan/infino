@@ -34,8 +34,8 @@ allocator, turn it off to avoid a second one:
 ```rust
 use std::sync::Arc;
 
-use arrow_array::{FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
-use arrow_schema::{DataType, Field, Schema};
+use infino::arrow_array::{FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
+use infino::arrow_schema::{DataType, Field, Schema};
 use infino::{connect, BoolMode, IndexSpec, Metric, VectorFilter, VectorSearchOptions};
 
 // Tiny stand-in for your embedding model so this runs as-is — a 16-dim
