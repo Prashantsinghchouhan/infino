@@ -42,8 +42,8 @@ use std::{
     sync::Arc,
 };
 
-use arrow_array::{Array, FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
-use arrow_schema::{DataType, Field, Schema};
+use infino::arrow_array::{Array, FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
+use infino::arrow_schema::{DataType, Field, Schema};
 use infino::{BoolMode, IndexSpec, Metric, VectorSearchOptions, connect};
 use serde::Deserialize;
 

@@ -16,8 +16,8 @@
 use std::sync::Arc;
 
 use arrow::util::pretty::pretty_format_batches;
-use arrow_array::{Array, FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
-use arrow_schema::{DataType, Field, Schema};
+use infino::arrow_array::{Array, FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
+use infino::arrow_schema::{DataType, Field, Schema};
 use infino::{BoolMode, IndexSpec, Metric, VectorFilter, VectorSearchOptions, connect};
 
 /// Embedding width for the demo vector column. Small on purpose (the

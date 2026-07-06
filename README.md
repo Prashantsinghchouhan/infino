@@ -146,8 +146,8 @@ const billing  = db.querySql("SELECT body FROM docs WHERE source = 'help-center'
 ```rust
 use std::sync::Arc;
 
-use arrow_array::{FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
-use arrow_schema::{DataType, Field, Schema};
+use infino::arrow_array::{FixedSizeListArray, Float32Array, LargeStringArray, RecordBatch};
+use infino::arrow_schema::{DataType, Field, Schema};
 use infino::{connect, BoolMode, IndexSpec, Metric, VectorFilter, VectorSearchOptions};
 
 // Tiny stand-in for your embedding model so this runs as-is — a 16-dim
@@ -342,8 +342,8 @@ base, fuse the two rankings (reciprocal-rank fusion), and join provenance
 ```rust
 use std::sync::Arc;
 
-use arrow_array::{FixedSizeListArray, Float32Array, Int64Array, LargeStringArray, RecordBatch};
-use arrow_schema::{DataType, Field, Schema};
+use infino::arrow_array::{FixedSizeListArray, Float32Array, Int64Array, LargeStringArray, RecordBatch};
+use infino::arrow_schema::{DataType, Field, Schema};
 use infino::{connect, IndexSpec, Metric};
 
 // Tiny stand-in for your embedding model so this runs as-is; real
