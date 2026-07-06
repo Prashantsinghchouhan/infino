@@ -8,7 +8,10 @@
 use std::sync::Arc;
 
 use infino::{
-    IndexSpec, arrow_array::{LargeStringArray, RecordBatch}, arrow_schema::{DataType, Field, Schema}, connect,
+    IndexSpec,
+    arrow_array::{LargeStringArray, RecordBatch},
+    arrow_schema::{DataType, Field, Schema},
+    connect,
 };
 
 #[test]
@@ -36,11 +39,8 @@ fn arrow_reexports_work_for_create_table_and_append() {
         .create_table("docs", schema.clone(), IndexSpec::new().fts("body"))
         .expect("create_table accepts re-exported Schema");
 
-    let batch = RecordBatch::try_new(
-        schema,
-        vec![Arc::new(LargeStringArray::from(vec!["ok"]))],
-    )
-    .expect("valid batch");
+    let batch = RecordBatch::try_new(schema, vec![Arc::new(LargeStringArray::from(vec!["ok"]))])
+        .expect("valid batch");
 
     table
         .append(&batch)

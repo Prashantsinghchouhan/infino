@@ -18,11 +18,11 @@
 use std::sync::Arc;
 
 use arrow::util::pretty::pretty_format_batches;
-use infino::arrow_array::{LargeStringArray, RecordBatch};
-use infino::arrow_schema::{DataType, Field, Schema};
 use bytes::Bytes;
 use datafusion::prelude::*;
 use infino::{
+    arrow_array::{LargeStringArray, RecordBatch},
+    arrow_schema::{DataType, Field, Schema},
     superfile::{
         SuperfileReader, VectorSearchOptions,
         builder::{BuilderOptions, FtsConfig, SuperfileBuilder, VectorConfig},
