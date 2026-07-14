@@ -25,25 +25,51 @@ use arrow_schema::Schema;
 use datafusion::common::DFSchema;
 use datafusion::execution::context::SessionContext;
 use datafusion::logical_expr::Expr;
-use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyValueError};
+use pyo3::create_exception;
+use pyo3::exceptions::{PyException, PyKeyError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
 use infino::{
-    BoolMode, ColdFetchMode, CompactionSettings, ConnectOptions, GcError, InfinoError, Metric,
-    OptimizeError, OptimizeOptions, VectorFilter, VectorSearchOptions,
+    BoolMode, ColdFetchMode, CompactionSettings, ConnectOptions, GcError, InfinoError as CoreError,
+    Metric, OptimizeError, OptimizeOptions, VectorFilter, VectorSearchOptions,
 };
 
-/// Map a core [`InfinoError`] to the closest Python exception.
-fn py_err(e: InfinoError) -> PyErr {
+// Typed exception surface for the bindings. `InfinoError` is the base for every
+// infino error, so a caller can catch the whole family with one `except` or
+// target a specific subclass. Today only the connection-memory-budget refusal
+// is typed; the other errors still map to Python builtins and move under this
+// base in a later pass.
+create_exception!(
+    infino,
+    InfinoError,
+    PyException,
+    "Base class for infino's errors. Catch it to handle any infino failure."
+);
+
+create_exception!(
+    infino,
+    ConnectionMemoryBudgetError,
+    InfinoError,
+    "Raised when an ingest or query would exceed the connection's memory \
+     budget (set via `connect(connection_memory_budget_bytes=...)`). It is \
+     recoverable: catch it and back off, for example narrow the query, split \
+     the ingest, or raise the budget."
+);
+
+/// Map a core engine error to the Python exception the caller sees.
+fn py_err(e: CoreError) -> PyErr {
     match e {
-        InfinoError::NotFound(m) => PyKeyError::new_err(m),
-        InfinoError::AlreadyExists(m)
-        | InfinoError::Schema(m)
-        | InfinoError::Cardinality(m)
-        | InfinoError::Query(m) => PyValueError::new_err(m),
-        InfinoError::Io(m) | InfinoError::Backend(m) => PyRuntimeError::new_err(m),
-        // `InfinoError` is `#[non_exhaustive]`: future variants fall back
+        CoreError::NotFound(m) => PyKeyError::new_err(m),
+        CoreError::AlreadyExists(m)
+        | CoreError::Schema(m)
+        | CoreError::Cardinality(m)
+        | CoreError::Query(m) => PyValueError::new_err(m),
+        CoreError::Io(m) | CoreError::Backend(m) => PyRuntimeError::new_err(m),
+        // A connection-memory-budget refusal: recoverable, so raise the typed
+        // ConnectionMemoryBudgetError the caller can catch and back off on.
+        CoreError::OverBudget(m) => ConnectionMemoryBudgetError::new_err(m),
+        // The core error is `#[non_exhaustive]`: future variants fall back
         // to a generic runtime error carrying the message.
         other => PyRuntimeError::new_err(other.to_string()),
     }
@@ -90,15 +116,26 @@ fn cold_fetch_from_str(s: &str) -> PyResult<ColdFetchMode> {
 /// local disk cache. Pass `validate=True` to probe the object store at
 /// connect (off by default) so bad credentials fail there. Omit all for
 /// local / `memory://` / ambient-credential object storage.
+///
+/// `connection_memory_budget_bytes` caps this connection's heap: the memory
+/// used to ingest data and run queries over it (keyword, vector, hybrid, or
+/// SQL). Crossing it raises `ConnectionMemoryBudgetError` rather than risking an
+/// OOM. Separate from `cache_budget_bytes` (the disk cache). Omit or `0` to
+/// measure only, never enforce. See
+/// <https://infino.ai/docs/guides/storage#connection-memory-budget>.
 #[pyfunction]
+// Each keyword mirrors a `ConnectOptions` setter; grouping them into a struct
+// would just move the surface without simplifying the Python-facing signature.
+#[allow(clippy::too_many_arguments)]
 #[pyo3(signature = (uri, *, storage_options=None, cache_dir=None, cache_budget_bytes=None,
-                    cold_fetch_mode=None, validate=None))]
+                    connection_memory_budget_bytes=None, cold_fetch_mode=None, validate=None))]
 fn connect(
     py: Python<'_>,
     uri: &str,
     storage_options: Option<HashMap<String, String>>,
     cache_dir: Option<String>,
     cache_budget_bytes: Option<u64>,
+    connection_memory_budget_bytes: Option<u64>,
     cold_fetch_mode: Option<String>,
     validate: Option<bool>,
 ) -> PyResult<Connection> {
@@ -119,6 +156,10 @@ fn connect(
         }
         if let Some(bytes) = cache_budget_bytes {
             opts = opts.with_cache_budget_bytes(bytes);
+            has_options = true;
+        }
+        if let Some(bytes) = connection_memory_budget_bytes {
+            opts = opts.with_connection_memory_budget_bytes(bytes);
             has_options = true;
         }
         if let Some(mode) = cold_fetch_mode {
@@ -768,5 +809,10 @@ fn infino_ext(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<MutationStats>()?;
     m.add_class::<GcReport>()?;
     m.add_class::<CompactOptions>()?;
+    m.add("InfinoError", m.py().get_type::<InfinoError>())?;
+    m.add(
+        "ConnectionMemoryBudgetError",
+        m.py().get_type::<ConnectionMemoryBudgetError>(),
+    )?;
     Ok(())
 }
